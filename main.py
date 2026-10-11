@@ -282,38 +282,24 @@ def do_scrape_leads(area: str = None, industry: str = None, role: str = None, ma
         print(f"  {Colors.BOLD}python main.py --send{Colors.RESET}")
 
 def interactive_menu():
-    """Interactive CLI menu when run without CLI arguments."""
+    """Interactive CLI menu with only core actions: Scraping & Email Sending."""
     while True:
         print_banner()
         print("Select an action:")
-        print(f"  {Colors.BOLD}1{Colors.RESET}. 🔍 Scrape & Find Emails in an Area (Phase 1 -> Phase 2)")
-        print(f"  {Colors.BOLD}2{Colors.RESET}. Preview AI-Generated Email (Dry-Run)")
-        print(f"  {Colors.BOLD}3{Colors.RESET}. Send Emails (Live Batch with Resume)")
-        print(f"  {Colors.BOLD}4{Colors.RESET}. Inspect CSV & View Pending Companies")
-        print(f"  {Colors.BOLD}5{Colors.RESET}. Test SMTP Connection & Resume Setup")
-        print(f"  {Colors.BOLD}6{Colors.RESET}. Exit\n")
+        print(f"  {Colors.BOLD}1{Colors.RESET}. 🔍 Scrape & Find Company Emails in an Area")
+        print(f"  {Colors.BOLD}2{Colors.RESET}. 📧 Send Job Application Emails (with Resume & AI)")
+        print(f"  {Colors.BOLD}3{Colors.RESET}. Exit\n")
 
-        choice = input(f"{Colors.CYAN}Enter choice (1-6): {Colors.RESET}").strip()
+        choice = input(f"{Colors.CYAN}Enter choice (1-3): {Colors.RESET}").strip()
         if choice == "1":
             do_scrape_leads(interactive=True)
         elif choice == "2":
-            try:
-                num = input("How many previews to generate? (default: 1): ").strip()
-                count = int(num) if num.isdigit() else 1
-            except ValueError:
-                count = 1
-            do_preview(limit=count)
-        elif choice == "3":
             do_send_batch()
-        elif choice == "4":
-            do_validate_csv()
-        elif choice == "5":
-            do_test_connection()
-        elif choice == "6" or choice.lower() in ("exit", "quit", "q"):
+        elif choice == "3" or choice.lower() in ("exit", "quit", "q"):
             print("Goodbye and good luck with your job hunt!")
             break
         else:
-            print(f"{Colors.YELLOW}Invalid choice, please enter a number from 1 to 6.{Colors.RESET}")
+            print(f"{Colors.YELLOW}Invalid choice, please enter 1, 2, or 3.{Colors.RESET}")
         
         input(f"\n{Colors.DIM}Press Enter to return to main menu...{Colors.RESET}")
 
