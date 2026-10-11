@@ -1,0 +1,20 @@
+Subject: Application for {role} - {sender_name}
+
+Hi {contact_name},
+
+I hope this email finds you well.
+
+I am reaching out to express my keen interest in the {role} position at {company_name}. With my background in {candidate_summary}, I have followed {company_name}'s work with great admiration.
+
+{custom_pitch}
+
+I have attached my resume for your review and would welcome the opportunity to speak with you briefly about how my skill set and enthusiasm can contribute to {company_name}'s team.
+
+Thank you very much for your time and consideration.
+
+Best regards,
+
+{sender_name}
+{sender_email}
+{sender_phone}
+{sender_linkedin}
