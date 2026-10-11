@@ -4,10 +4,20 @@ import random
 import sys
 import time
 from pathlib import Path
+
+# Force UTF-8 encoding for Windows terminal
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from config import Config
 from ai_generator import AIEmailGenerator
 from csv_manager import CSVManager
 from email_sender import EmailSender
+from lead_scraper import LeadScraper
 
 # Terminal color helper (ANSI)
 class Colors:
@@ -194,41 +204,126 @@ def do_send_batch():
 
     print(f"\n{Colors.GREEN}{Colors.BOLD}Batch complete! Check 'data/sent_log.csv' for the full delivery log.{Colors.RESET}")
 
+def do_scrape_leads(area: str = None, industry: str = None, role: str = None, max_leads: int = 8, interactive: bool = False):
+    """Phase 1: Automated Company Discovery & Scraping by Area & Industry."""
+    print(f"\n{Colors.CYAN}{Colors.BOLD}===============================================================")
+    print("   PHASE 1: AUTOMATED COMPANY & EMAIL SCRAPING (AGENT REACH)")
+    print(f"==============================================================={Colors.RESET}")
+    
+    if interactive:
+        area_input = input(f"{Colors.CYAN}Enter target Area / City (e.g. 'Rabat', 'Casablanca', 'Paris'): {Colors.RESET}").strip()
+        area = area_input if area_input else "Rabat"
+
+        ind_input = input(f"{Colors.CYAN}Enter industry / keywords (default: 'Startups & Entreprises IT'): {Colors.RESET}").strip()
+        industry = ind_input if ind_input else "Startups & Entreprises IT"
+
+        role_input = input(f"{Colors.CYAN}Enter target job role (default: 'Développeur Full Stack'): {Colors.RESET}").strip()
+        role = role_input if role_input else "Développeur Full Stack"
+
+        limit_input = input(f"{Colors.CYAN}How many companies to find? (default: 8): {Colors.RESET}").strip()
+        max_leads = int(limit_input) if limit_input.isdigit() else 8
+    else:
+        area = area or "Rabat"
+        industry = industry or "Startups & Entreprises IT"
+        role = role or "Développeur Full Stack"
+        max_leads = max_leads or 8
+
+    print(f"\n{Colors.BOLD}Searching and scraping leads for:{Colors.RESET}")
+    print(f" - Area: {Colors.CYAN}{area}{Colors.RESET}")
+    print(f" - Industry: {Colors.CYAN}{industry}{Colors.RESET}")
+    print(f" - Role: {Colors.CYAN}{role}{Colors.RESET}")
+    print(f" - Max targets: {Colors.CYAN}{max_leads}{Colors.RESET}\n")
+
+    scraper = LeadScraper()
+    
+    def on_progress(msg: str):
+        print(f" {Colors.DIM}{msg}{Colors.RESET}")
+
+    leads = scraper.scrape_leads_for_area(
+        area=area,
+        industry=industry,
+        role=role,
+        max_leads=max_leads,
+        progress_callback=on_progress
+    )
+
+    if not leads:
+        print(f"\n{Colors.YELLOW}[!] No new company emails found for '{industry}' in '{area}'. Try broadening keywords.{Colors.RESET}")
+        return
+
+    print(f"\n{Colors.GREEN}{Colors.BOLD}[✓] Discovery Complete! Found {len(leads)} company email(s):{Colors.RESET}")
+    for idx, item in enumerate(leads, 1):
+        print(f"  {idx}. {Colors.BOLD}{item['company_name']}{Colors.RESET} -> {Colors.CYAN}{item['email']}{Colors.RESET} [{item['contact_name']}]")
+        print(f"     {Colors.DIM}{item['company_notes']}{Colors.RESET}")
+
+    csv_mgr = CSVManager()
+    added, skipped = csv_mgr.append_companies(leads)
+    print(f"\n{Colors.GREEN}Saved to '{Config.CSV_PATH}': {added} newly added, {skipped} duplicates skipped.{Colors.RESET}")
+
+    # Transition to Phase 2
+    print(f"\n{Colors.CYAN}{Colors.BOLD}===============================================================")
+    print("   PHASE 2: OUTREACH & APPLICATION DISPATCH")
+    print(f"==============================================================={Colors.RESET}")
+    
+    if interactive:
+        print("What would you like to do next?")
+        print(f"  {Colors.BOLD}1{Colors.RESET}. Preview AI-crafted emails for these companies (Dry-Run)")
+        print(f"  {Colors.BOLD}2{Colors.RESET}. Start sending emails now (Live batch with CV attachment)")
+        print(f"  {Colors.BOLD}3{Colors.RESET}. Return to Main Menu\n")
+
+        next_choice = input(f"{Colors.CYAN}Select option (1-3, default 1): {Colors.RESET}").strip()
+        if next_choice == "2":
+            do_send_batch()
+        elif next_choice in ("1", ""):
+            do_preview(limit=added if added > 0 else 1)
+    else:
+        print(f"To preview or send emails to these newly scraped leads, run:")
+        print(f"  {Colors.BOLD}python main.py --preview {added}{Colors.RESET}")
+        print(f"  {Colors.BOLD}python main.py --send{Colors.RESET}")
+
 def interactive_menu():
     """Interactive CLI menu when run without CLI arguments."""
     while True:
         print_banner()
         print("Select an action:")
-        print(f"  {Colors.BOLD}1{Colors.RESET}. Test Connection & Resume Setup")
-        print(f"  {Colors.BOLD}2{Colors.RESET}. Inspect CSV & View Pending Companies")
-        print(f"  {Colors.BOLD}3{Colors.RESET}. Preview AI-Generated Email (Dry-Run)")
-        print(f"  {Colors.BOLD}4{Colors.RESET}. Send Emails (Live Batch)")
-        print(f"  {Colors.BOLD}5{Colors.RESET}. Exit\n")
+        print(f"  {Colors.BOLD}1{Colors.RESET}. 🔍 Scrape & Find Emails in an Area (Phase 1 -> Phase 2)")
+        print(f"  {Colors.BOLD}2{Colors.RESET}. Preview AI-Generated Email (Dry-Run)")
+        print(f"  {Colors.BOLD}3{Colors.RESET}. Send Emails (Live Batch with Resume)")
+        print(f"  {Colors.BOLD}4{Colors.RESET}. Inspect CSV & View Pending Companies")
+        print(f"  {Colors.BOLD}5{Colors.RESET}. Test SMTP Connection & Resume Setup")
+        print(f"  {Colors.BOLD}6{Colors.RESET}. Exit\n")
 
-        choice = input(f"{Colors.CYAN}Enter choice (1-5): {Colors.RESET}").strip()
+        choice = input(f"{Colors.CYAN}Enter choice (1-6): {Colors.RESET}").strip()
         if choice == "1":
-            do_test_connection()
+            do_scrape_leads(interactive=True)
         elif choice == "2":
-            do_validate_csv()
-        elif choice == "3":
             try:
                 num = input("How many previews to generate? (default: 1): ").strip()
                 count = int(num) if num.isdigit() else 1
             except ValueError:
                 count = 1
             do_preview(limit=count)
-        elif choice == "4":
+        elif choice == "3":
             do_send_batch()
-        elif choice == "5" or choice.lower() in ("exit", "quit", "q"):
+        elif choice == "4":
+            do_validate_csv()
+        elif choice == "5":
+            do_test_connection()
+        elif choice == "6" or choice.lower() in ("exit", "quit", "q"):
             print("Goodbye and good luck with your job hunt!")
             break
         else:
-            print(f"{Colors.YELLOW}Invalid choice, please enter 1, 2, 3, 4, or 5.{Colors.RESET}")
+            print(f"{Colors.YELLOW}Invalid choice, please enter a number from 1 to 6.{Colors.RESET}")
         
         input(f"\n{Colors.DIM}Press Enter to return to main menu...{Colors.RESET}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Job Application Auto-Mailer CLI")
+    parser = argparse.ArgumentParser(description="Job Application Auto-Mailer CLI v2.0")
+    parser.add_argument("--scrape", action="store_true", help="Find companies and scrape emails for an area")
+    parser.add_argument("--area", type=str, help="Target city / area for scraping (e.g. 'Rabat', 'Casablanca')")
+    parser.add_argument("--industry", type=str, help="Target industry (e.g. 'startups', 'tech')")
+    parser.add_argument("--role", type=str, help="Target role for application")
+    parser.add_argument("--limit", type=int, default=8, help="Max leads to scrape")
     parser.add_argument("--test", action="store_true", help="Test SMTP server connection and credentials")
     parser.add_argument("--status", action="store_true", help="Show CSV status and pending counts")
     parser.add_argument("--preview", type=int, nargs="?", const=1, help="Preview AI-crafted email without sending (e.g. --preview 2)")
@@ -237,7 +332,10 @@ def main():
     args = parser.parse_args()
 
     # If any CLI flag provided, execute it directly
-    if args.test:
+    if args.scrape:
+        print_banner()
+        do_scrape_leads(area=args.area, industry=args.industry, role=args.role, max_leads=args.limit)
+    elif args.test:
         print_banner()
         do_test_connection()
     elif args.status:

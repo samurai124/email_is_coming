@@ -139,6 +139,48 @@ class CSVManager:
                 error_message
             ])
 
+    def append_companies(self, new_companies: list[dict]) -> tuple[int, int]:
+        """
+        Appends new discovered companies to companies.csv without duplicates.
+        Returns: (added_count, skipped_count)
+        """
+        existing_emails = set()
+        if self.csv_path.exists():
+            with open(self.csv_path, "r", encoding="utf-8", errors="replace") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    em = row.get("email", "").strip().lower()
+                    if em:
+                        existing_emails.add(em)
+
+        is_new_file = not self.csv_path.exists()
+        added = 0
+        skipped = 0
+
+        self.csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if is_new_file:
+                writer.writerow(["company_name", "email", "contact_name", "role", "company_notes"])
+
+            for comp in new_companies:
+                em = comp.get("email", "").strip().lower()
+                if not em or em in existing_emails:
+                    skipped += 1
+                    continue
+
+                writer.writerow([
+                    comp.get("company_name", "Entreprise"),
+                    comp.get("email", ""),
+                    comp.get("contact_name", "Équipe Recrutement"),
+                    comp.get("role", "Software Engineer"),
+                    comp.get("company_notes", "")
+                ])
+                existing_emails.add(em)
+                added += 1
+
+        return added, skipped
+
     def get_summary(self) -> dict:
         """Returns statistics from the current log."""
         if not self.log_path.exists():

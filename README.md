@@ -1,6 +1,6 @@
-# Job Application Auto-Mailer (CLI)
+# Job Application Auto-Mailer & Lead Scraper CLI (v2.0)
 
-An automated, AI-personalized cold outreach CLI application that sends job application emails with your resume attached directly to hiring teams, with built-in anti-spam safeguards, duplicate protection, and dry-run preview capabilities.
+An automated, AI-personalized cold outreach CLI application that **discovers and scrapes company emails for any given area/city**, personalizes cold job application emails with your resume attached, and dispatches them with anti-spam safeguards.
 
 ---
 
@@ -9,7 +9,7 @@ An automated, AI-personalized cold outreach CLI application that sends job appli
 ```text
 job_application_mailer/
 ├── data/
-│   ├── companies.csv       <- List of target companies & contacts
+│   ├── companies.csv       <- List of target companies & contacts (auto-populated by scraper)
 │   ├── sent_log.csv        <- Automatically tracked delivery history (prevents duplicates)
 │   └── resumes/
 │       └── resume.pdf      <- Your resume PDF to attach
@@ -17,11 +17,12 @@ job_application_mailer/
 │   └── default_template.txt<- Fallback customizable email template
 ├── .env                    <- Your credentials and personal profile
 ├── .env.example            <- Example configuration reference
+├── lead_scraper.py         <- Automated area web scraper (Agent Reach Jina Reader + DDG search)
 ├── ai_generator.py         <- Gemini API integration & template engine
-├── csv_manager.py          <- CSV parsing, email validation & logging
+├── csv_manager.py          <- CSV parsing, deduplication, email validation & logging
 ├── email_sender.py         <- SMTP client, MIME multipart builder & attachment handler
 ├── config.py               <- Settings & environment loader
-├── main.py                 <- Interactive CLI terminal interface
+├── main.py                 <- Interactive CLI terminal interface (Phase 1 -> Phase 2)
 └── README.md
 ```
 
@@ -41,18 +42,13 @@ CANDIDATE_SUMMARY="Full-Stack Developer with experience in Python, React, and cl
 # Gmail Settings:
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
-SENDER_PASSWORD="xxxx xxxx xxxx xxxx"   # Use a 16-character App Password (see below)
+SENDER_PASSWORD="xxxx xxxx xxxx xxxx"   # https://myaccount.google.com/apppasswords click on this to get ur password 
 
 # AI Personalization (Google Gemini):
 GEMINI_API_KEY="your-gemini-api-key"
 ```
 
-#### 🔑 How to get a Gmail App Password (1 minute):
-1. Go to your [Google Account Security Settings](https://myaccount.google.com/security).
-2. Enable **2-Step Verification** (if not already enabled).
-3. Search for or click on **App passwords** (or visit [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)).
-4. Enter an app name (e.g. `JobMailer`) and click **Create**.
-5. Copy the generated 16-character code (e.g. `abcd efgh ijkl mnop`) and paste it into `SENDER_PASSWORD` in your `.env`.
+
 
 #### 🤖 How to get a Free Gemini API Key:
 1. Visit [Google AI Studio](https://aistudio.google.com/).
@@ -92,11 +88,12 @@ This opens the interactive menu:
 ===============================================================
 
 Select an action:
-  1. Test Connection & Resume Setup
-  2. Inspect CSV & View Pending Companies
-  3. Preview AI-Generated Email (Dry-Run)
-  4. Send Emails (Live Batch)
-  5. Exit
+  1. 🔍 Scrape & Find Emails in an Area (Phase 1 -> Phase 2)
+  2. Preview AI-Generated Email (Dry-Run)
+  3. Send Emails (Live Batch with Resume)
+  4. Inspect CSV & View Pending Companies
+  5. Test SMTP Connection & Resume Setup
+  6. Exit
 ```
 
 ---
@@ -105,6 +102,18 @@ Select an action:
 
 You can also run specific tasks directly without entering the interactive menu:
 
+- **Phase 1: Scrape company emails in a specific city/area:**
+  ```powershell
+  python main.py --scrape --area "Casablanca" --industry "startups" --role "Développeur Full Stack" --limit 10
+  ```
+- **Phase 2: Preview personalized emails without sending (Dry-Run):**
+  ```powershell
+  python main.py --preview 2
+  ```
+- **Phase 2: Send emails to pending companies:**
+  ```powershell
+  python main.py --send
+  ```
 - **Check status & pending companies:**
   ```powershell
   python main.py --status
@@ -112,14 +121,6 @@ You can also run specific tasks directly without entering the interactive menu:
 - **Test your email SMTP connection & credentials:**
   ```powershell
   python main.py --test
-  ```
-- **Preview personalized emails without sending (Dry-Run):**
-  ```powershell
-  python main.py --preview 2
-  ```
-- **Send emails to pending companies:**
-  ```powershell
-  python main.py --send
   ```
 
 ---
